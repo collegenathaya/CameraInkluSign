@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InkluSign - Belajar Bahasa Isyarat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Library MediaPipe & AI -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    
+    <!-- Library Animasi -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <style>
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #video-container video {
+            transform: scaleX(-1);
+            border-radius: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-indigo-600">InkluSign</h1>
+            <div class="space-x-6 text-sm font-medium">
+                <a href="#belajar" class="hover:text-indigo-600">Belajar</a>
+                <a href="#kamus" class="hover:text-indigo-600">Kamus</a>
+                <a href="#deteksi" class="hover:text-indigo-600">Latihan Isyarat</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="max-w-6xl mx-auto px-4 py-12 flex flex-col md:flex-row justify-between items-center gap-8">
+        <div class="text-left">
+            <h2 class="text-4xl md:text-5xl font-extrabold mb-4 animate__animated animate__fadeInLeft">
+                Belajar Bahasa Isyarat <br><span class="text-indigo-600">Jadi Lebih Seru!</span>
+            </h2>
+            <p class="text-slate-600 max-w-md">Jembatani komunikasi dengan teknologi AI deteksi gerakan tangan yang interaktif dan mudah diakses.</p>
+        </div>
+        <!-- Skor Progress -->
+        <div class="bg-white p-6 rounded-3xl shadow-lg border-b-4 border-indigo-500 animate__animated animate__fadeInRight w-full md:w-auto">
+            <p class="text-xs uppercase tracking-widest text-slate-400 font-bold">XP Kamu</p>
+            <h3 id="user-xp" class="text-4xl font-black text-indigo-600">0</h3>
+            <div class="w-full md:w-32 h-2 bg-slate-100 rounded-full mt-2">
+                <div id="progress-bar" class="h-full bg-indigo-500 rounded-full transition-all duration-500" style="width: 0%;"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 space-y-16 pb-20">
+
+        <!-- FITUR 1: Real-time Sign Recognition -->
+        <section id="deteksi" class="bg-indigo-900 rounded-3xl p-8 text-white shadow-xl">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4 text-white">Latihan Isyarat Real-Time</h3>
+                    <p class="mb-6 text-indigo-100 text-sm">Nyalakan kamera dan coba ikuti gerakan isyarat. AI kami akan mencoba membaca gerakanmu secara langsung!</p>
+                    <button onclick="startCamera()" class="bg-white text-indigo-600 px-6 py-2 rounded-full font-bold hover:bg-indigo-50 transition shadow-lg">Buka Kamera</button>
+                    <div id="status-ai" class="mt-4 p-3 bg-indigo-800 rounded-lg text-xs italic transition-all">Status: Kamera Non-aktif</div>
+                </div>
+                <div id="video-container" class="bg-black aspect-video rounded-2xl flex items-center justify-center overflow-hidden relative border-4 border-indigo-800">
+                    <video id="webcam" autoplay playsinline class="hidden w-full h-full object-cover"></video>
+                    <div id="placeholder-text" class="text-indigo-300">Kamera akan muncul di sini</div>
+                    <div class="absolute bottom-4 left-4 bg-black/50 backdrop-blur-md p-2 rounded text-sm font-mono text-white">
+                        Hasil: <span id="result-text" class="text-yellow-400 font-bold">-</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FITUR 2: Kamus Searchable -->
+        <section id="kamus">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+                <div>
+                    <h3 class="text-2xl font-bold">Kamus Isyarat</h3>
+                    <p class="text-slate-500">Cari kata yang ingin kamu pelajari hari ini.</p>
+                </div>
+                <input type="text" id="searchInput" onkeyup="searchKamus()" placeholder="Cari kata (misal: Halo, A, B)..." class="w-full md:w-80 p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+            </div>
+
+            <div id="kamusGrid" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- Data diisi JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- DATA ---
+        const dataKamus = [
+            { kata: "Halo", kategori: "Salam", xp: 10, img: "https://via.placeholder.com/150?text=Halo" },
+            { kata: "Terima Kasih", kategori: "Sopan", xp: 20, img: "https://via.placeholder.com/150?text=Terima+Kasih" },
+            { kata: "Maaf", kategori: "Sopan", xp: 15, img: "https://via.placeholder.com/150?text=Maaf" },
+            { kata: "Nama", kategori: "Dasar", xp: 10, img: "https://via.placeholder.com/150?text=Nama" },
+            { kata: "Saya", kategori: "Dasar", xp: 10, img: "https://via.placeholder.com/150?text=Saya" },
+            { kata: "A", kategori: "Alfabet", xp: 5, img: "https://via.placeholder.com/150?text=Abjad+A" },
+            { kata: "B", kategori: "Alfabet", xp: 5, img: "https://via.placeholder.com/150?text=Abjad+B" }
+        ];
+
+        let totalXP = parseInt(localStorage.getItem('inklusign_xp')) || 0;
+        updateXPDisplay();
+
+        // --- FUNGSI RENDER ---
+        function renderKamus(items) {
+            const grid = document.getElementById('kamusGrid');
+            grid.innerHTML = '';
+            items.forEach(item => {
+                grid.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hover:scale-105 transition-all animate__animated animate__fadeInUp">
+                        <img src="${item.img}" class="w-full h-32 object-cover rounded-xl mb-3 bg-slate-100">
+                        <h4 class="font-bold text-lg">${item.kata}</h4>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full font-semibold uppercase tracking-wider">${item.kategori}</span>
+                            <button onclick="tambahXP(${item.xp})" class="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition">Selesai ✓</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- LOGIKA GAMIFIKASI ---
+        function tambahXP(poin) {
+            totalXP += poin;
+            localStorage.setItem('inklusign_xp', totalXP);
+            updateXPDisplay();
+            
+            const xpEl = document.getElementById('user-xp');
+            xpEl.classList.remove('animate__bounceIn');
+            void xpEl.offsetWidth; // Trigger reflow
+            xpEl.classList.add('animate__animated', 'animate__bounceIn');
+        }
+
+        function updateXPDisplay() {
+            document.getElementById('user-xp').innerText = totalXP;
+            // Update progress bar (max 500 XP untuk level 1 misal)
+            const progress = Math.min((totalXP / 500) * 100, 100);
+            document.getElementById('progress-bar').style.width = progress + "%";
+        }
+
+        // --- LOGIKA SEARCH ---
+        function searchKamus() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = dataKamus.filter(item => item.kata.toLowerCase().includes(keyword));
+            renderKamus(filtered);
+        }
+
+        // --- LOGIKA AI (MEDIAPIPE) ---
+        const videoElement = document.getElementById('webcam');
+        const statusText = document.getElementById('status-ai');
+        const resultText = document.getElementById('result-text');
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults((results) => {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                statusText.innerText = "Status: Tangan Terdeteksi! ✨";
+                statusText.className = "mt-4 p-3 bg-green-600 rounded-lg text-xs italic text-white";
+                resultText.innerText = "Sistem Aktif";
+            } else {
+                statusText.innerText = "Status: Mencari Tangan...";
+                statusText.className = "mt-4 p-3 bg-indigo-800 rounded-lg text-xs italic text-white";
+                resultText.innerText = "-";
+            }
+        });
+
+        async function startCamera() {
+            document.getElementById('placeholder-text').innerText = "Meminta Izin Kamera...";
+            try {
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await hands.send({ image: videoElement });
+                    },
+                    width: 640,
+                    height: 480
+                });
+                camera.start().then(() => {
+                    videoElement.classList.remove('hidden');
+                    document.getElementById('placeholder-text').classList.add('hidden');
+                });
+            } catch (err) {
+                alert("Gagal buka kamera. Pastikan izin kamera sudah diberikan ya!");
+            }
+        }
+
+        // Jalankan render awal
+        renderKamus(dataKamus);
+    </script>
+</body>
+</html>
